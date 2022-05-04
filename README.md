@@ -1,8 +1,8 @@
 # Top N selector
-[![Crates.io](https://img.shields.io/crates/v/topset?style=flat)](https://crates.io/crates/codespan_preprocessed)
-[![Crates.io](https://img.shields.io/crates/d/topset?style=flat)](https://crates.io/crates/codespan_preprocessed)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat)](https://crates.io/crates/codespan_preprocessed)
-[![Docs](https://img.shields.io/docsrs/topset)](https://docs.rs/codespan_preprocessed)
+[![Crates.io](https://img.shields.io/crates/v/topset?style=flat)](https://crates.io/crates/topset)
+[![Crates.io](https://img.shields.io/crates/d/topset?style=flat)](https://crates.io/crates/topset)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat)](https://crates.io/crates/topset)
+[![Docs](https://img.shields.io/docsrs/topset)](https://docs.rs/topset)
 
 This crate provides a _topset_ which selects a given number of greatest items.
 The criterium used to sort the items could be specified as a closure.
