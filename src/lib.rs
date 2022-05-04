@@ -22,7 +22,7 @@ impl<X,C> TopSet<X,C>
         }
     }
 
-    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, cmp: C, init: I) -> Self
+    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, cmp: C) -> Self
     {
         assert!(n > 0);
         let mut top = Self::new(n, cmp);
