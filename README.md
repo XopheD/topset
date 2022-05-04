@@ -1,4 +1,8 @@
 # Top N selector
+[![Crates.io](https://img.shields.io/crates/v/topset?style=flat)](https://crates.io/crates/codespan_preprocessed)
+[![Crates.io](https://img.shields.io/crates/d/topset?style=flat)](https://crates.io/crates/codespan_preprocessed)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat)](https://crates.io/crates/codespan_preprocessed)
+[![Docs](https://img.shields.io/docsrs/topset)](https://docs.rs/codespan_preprocessed)
 
 This crate provides a _topset_ which selects a given number of greatest items.
 The criterium used to sort the items could be specified as a closure.
@@ -12,7 +16,7 @@ the N greatest items of a collection.
 _Note:_ the returned items are unsorted.
 
 ```rust
-use topset::TopSet;
+use topset::TopIter;
 
 
 fn main()
@@ -21,7 +25,7 @@ fn main()
     
     // getting the four greatest integers (repeating allowed)
     TopIter::new(4)
-        .with_init(items)
+        .with_init(items.iter())
         .into_iter()
         .for_each(|x| eprintln!("in the top 4: {}", x));
     
