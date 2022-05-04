@@ -2,4 +2,6 @@
 
 This crate provides a _topset_ which selects a given number of greatest items.
 
-It is based on a binary tree with a fixed size.
+The criterium used to sort the items could be specified as a closure.
+
+It is based on a binary heap with a fixed size.
