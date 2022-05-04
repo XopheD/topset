@@ -32,7 +32,7 @@ impl<X,C> TopSet<X,C>
 
     pub fn resize(&mut self, n: usize)
     {
-        if count < n {
+        if self.count < n {
             self.heap.reserve(n - self.count);
         } else {
             while self.heap.len() > n {
@@ -94,7 +94,7 @@ impl<X,C> TopSet<X,C>
 
     pub fn push(&mut self, mut x: X) -> Option<X>
     {
-        if self.heap.len() < count {
+        if self.heap.len() < self.count {
             // some room left
             self.heap.push(x);
             self.percolate_up(self.heap.len()-1);
