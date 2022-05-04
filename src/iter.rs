@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use std::marker::PhantomData;
 use crate::TopSet;
 
+/// An iterator builder over the N greatest items of a given set
 #[derive(Clone)]
 pub struct TopIter { count: usize }
 
@@ -23,16 +24,19 @@ impl Default for TopIter
 
 impl TopIter
 {
+    /// A Top N iterator
     pub fn new(n: usize) -> Self {
         assert!( n > 0 );
         Self { count: n }
     }
 
+    /// Specify the initial set of items to scan
     pub fn with_init<I:IntoIterator>(self, init:I) -> TopIterI<I>
     {
         TopIterI { count: self.count, init }
     }
 
+    /// Specify the comparison to use
     pub fn with_compare<X, C:Fn(&X, &X)->Ordering>(self, cmp:C) -> TopIterC<X,C>
     {
         TopIterC { count: self.count, cmp, item: PhantomData::default() }

@@ -3,23 +3,43 @@ use std::cmp::Ordering::Greater;
 use std::fmt::{Debug, Formatter};
 use std::mem;
 
+/// A top N set of items.
+///
+/// This set contains no more than N items.
+/// When this limit is reached, the smallest (according to
+/// the specified comparison) is thrown.
 #[derive(Clone)]
 pub struct TopSet<X,C>
 {
     heap: Vec<X>, // a heap with the greatest at the end
+    count: usize,
     cmp: C
 }
 
 impl<X,C> TopSet<X,C>
     where C: Fn(&X,&X) -> Ordering
 {
+    /// Creates a new top set with a
     pub fn new(n: usize, cmp: C) -> Self
     {
         assert!(n > 0);
         Self {
             heap: Vec::with_capacity(n),
+            count: n,
             cmp
         }
+    }
+
+    pub fn resize(&mut self, n: usize)
+    {
+        if count < n {
+            self.heap.reserve(n - self.count);
+        } else {
+            while self.heap.len() > n {
+                self.pop();
+            }
+        }
+        self.count = n;
     }
 
     pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, cmp: C) -> Self
@@ -29,6 +49,7 @@ impl<X,C> TopSet<X,C>
         top.extend(init);
         top
     }
+
 
     fn percolate_up(&mut self, mut i: usize)
     {
@@ -73,7 +94,7 @@ impl<X,C> TopSet<X,C>
 
     pub fn push(&mut self, mut x: X) -> Option<X>
     {
-        if self.heap.len() < self.heap.capacity() {
+        if self.heap.len() < count {
             // some room left
             self.heap.push(x);
             self.percolate_up(self.heap.len()-1);
@@ -92,6 +113,17 @@ impl<X,C> TopSet<X,C>
     pub fn peek(&self) -> Option<&X>
     {
         self.heap.first()
+    }
+
+    pub fn pop(&mut self) -> Option<X>
+    {
+        if self.heap.len() <= 2 {
+            self.heap.pop()
+        } else {
+            let pop = self.heap.swap_remove(0);
+            self.percolate_down(0);
+            Some(pop)
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item=&X>
