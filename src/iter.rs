@@ -24,19 +24,19 @@ impl Default for TopIter
 impl TopIter
 {
     /// A Top N iterator
-    pub fn new(n: usize) -> Self {
+    #[inline] pub fn new(n: usize) -> Self {
         assert!( n > 0 );
         Self { count: n }
     }
 
     /// Specify the initial set of items to scan
-    pub fn with_init<I:IntoIterator>(self, init:I) -> TopIterI<I>
+    #[inline] pub fn with_init<I:IntoIterator>(self, init:I) -> TopIterI<I>
     {
         TopIterI { count: self.count, init }
     }
 
     /// Specify the comparison to use
-    pub fn with_selector<X, C:Fn(&X, &X)->bool>(self, beat:C) -> TopIterC<X,C>
+    #[inline] pub fn with_selector<X, C:Fn(&X, &X)->bool>(self, beat:C) -> TopIterC<X,C>
     {
         TopIterC { count: self.count, beat, item: PhantomData::default() }
     }
@@ -45,7 +45,7 @@ impl TopIter
 
 impl<I:IntoIterator> TopIterI<I>
 {
-    pub fn with_selector<C:Fn(&I::Item, &I::Item)->bool>(self, beat:C) -> TopIterIC<I,C>
+    #[inline] pub fn with_selector<C:Fn(&I::Item, &I::Item)->bool>(self, beat:C) -> TopIterIC<I,C>
     {
         TopIterIC { top: TopSet::with_init(self.count, self.init, beat) }
     }
@@ -54,7 +54,7 @@ impl<I:IntoIterator> TopIterI<I>
 
 impl<X,C:Fn(&X, &X)->bool> TopIterC<X,C>
 {
-    pub fn with_init<I:IntoIterator<Item=X>>(self, init:I) -> TopIterIC<I,C>
+    #[inline] pub fn with_init<I:IntoIterator<Item=X>>(self, init:I) -> TopIterIC<I,C>
     {
         TopIterIC { top: TopSet::with_init(self.count, init, self.beat) }
     }
@@ -69,7 +69,7 @@ impl<I> IntoIterator for TopIterI<I>
     type Item = I::Item;
     type IntoIter = <Vec<I::Item> as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter {
+    #[inline] fn into_iter(self) -> Self::IntoIter {
         self.with_selector(<I::Item as PartialOrd>::gt).into_iter()
     }
 }
@@ -79,7 +79,7 @@ impl <I:IntoIterator,C:Fn(&I::Item, &I::Item)->bool> IntoIterator for TopIterIC<
     type Item = I::Item;
     type IntoIter = <Vec<I::Item> as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter {
+    #[inline] fn into_iter(self) -> Self::IntoIter {
         self.top.into_iter()
     }
 }

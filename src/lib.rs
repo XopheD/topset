@@ -55,3 +55,9 @@ pub use iter::TopIter;
 
 mod heap;
 pub use heap::TopSet;
+
+#[inline]
+pub fn topiter(n: usize) -> TopIter
+{
+    TopIter::new(n)
+}

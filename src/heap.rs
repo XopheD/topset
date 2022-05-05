@@ -6,6 +6,16 @@ use std::mem;
 /// This set contains no more than N items.
 /// When this limit is reached, the smallest (according to
 /// the specified comparison) is thrown.
+///
+/// Comparing two elements is done by a duel, resolved by a provided closure:
+/// if `true` is returned, the first item wins, if `false` the second.
+///
+/// By the way, using [`PartialOrd::gt`]
+/// will select the top elements and [`PartialOrd::lt`] will select the lowest.
+///
+/// Of course, any closure could be used but it should satisfy the transitivity.
+/// In other words, if `a` beats `b` and `b` beats `c` then `a` should beat `c` too.
+///
 #[derive(Clone)]
 pub struct TopSet<X,C>
 {
@@ -17,7 +27,7 @@ pub struct TopSet<X,C>
 impl<X,C> TopSet<X,C>
     where C: Fn(&X,&X) -> bool
 {
-    /// Creates a new top set with a
+    /// Creates a new top set with a selecting closure.
     pub fn new(n: usize, beat: C) -> Self
     {
         assert!(n > 0);
@@ -28,6 +38,24 @@ impl<X,C> TopSet<X,C>
         }
     }
 
+    /// Creates a new top set with a selecting closure and an initial set of items.
+    ///
+    /// If the initial set contains more than `n` elements, only the `n` greatest ones
+    /// (according to `beat` selector) are stored.
+    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
+    {
+        assert!(n > 0);
+        let mut top = Self::new(n, beat);
+        top.extend(init);
+        top
+    }
+
+
+    /// Resize the top set
+    ///
+    /// If the size decreases, then the lowest items are removed.
+    /// If the size increases, nothing else happens but there is still more room
+    /// for next insertions.
     pub fn resize(&mut self, n: usize)
     {
         if self.count < n {
@@ -40,12 +68,69 @@ impl<X,C> TopSet<X,C>
         self.count = n;
     }
 
-    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
+    /// Insert a new item.
+    ///
+    /// If the top set is not filled, the item is simply added and `None` is returned.
+    ///
+    /// If there is no more room, then one item should be rejected:
+    /// * if the new item is better than some already stored ones, it is added and
+    /// and the removed item is returned
+    /// * if the new item is worse than all the stored ones, it is returned
+    pub fn insert(&mut self, mut x: X) -> Option<X>
     {
-        assert!(n > 0);
-        let mut top = Self::new(n, beat);
-        top.extend(init);
-        top
+        if self.heap.len() < self.count {
+            // some room left
+            self.heap.push(x);
+            self.percolate_up(self.heap.len()-1);
+            None
+
+        } else {
+            if (self.beat)(&x, &self.heap[0]) {
+                // put the greatest the deepest: the new one should be kept
+                mem::swap(&mut x, &mut self.heap[0]);
+                self.percolate_down(0);
+            }
+            Some(x)
+        }
+    }
+
+    /// Read access to the lowest item of the top set
+    ///
+    /// Notice that it actually returned the _lowest_ one and
+    /// so all the others are better (or equal) this one.
+    #[inline]
+    pub fn peek(&self) -> Option<&X>
+    {
+        self.heap.first()
+    }
+
+    /// Pop the lowest item of the top set
+    ///
+    /// Remove and return the _lowest_ item of the top set.
+    /// After this call, there is one more room for a item.
+    ///
+    /// This method is the only way to get the top elements
+    /// in a sorted way (from the lowest to the best).
+    pub fn pop(&mut self) -> Option<X>
+    {
+        if self.heap.len() <= 2 {
+            self.heap.pop()
+        } else {
+            let pop = self.heap.swap_remove(0);
+            self.percolate_down(0);
+            Some(pop)
+        }
+    }
+
+    /// Iterate over all the top selected items.
+    ///
+    /// The iterator is **not** sorted. A sorted iteration
+    /// could be obtained by iterative call to [`Self::pop`].
+    ///
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item=&X>
+    {
+        self.heap.iter()
     }
 
 
@@ -89,45 +174,6 @@ impl<X,C> TopSet<X,C>
             }
         }
     }
-
-    pub fn push(&mut self, mut x: X) -> Option<X>
-    {
-        if self.heap.len() < self.count {
-            // some room left
-            self.heap.push(x);
-            self.percolate_up(self.heap.len()-1);
-            None
-
-        } else {
-            if (self.beat)(&x, &self.heap[0]) {
-                // put the greatest the deepest: the new one should be kept
-                mem::swap(&mut x, &mut self.heap[0]);
-                self.percolate_down(0);
-            }
-            Some(x)
-        }
-    }
-
-    pub fn peek(&self) -> Option<&X>
-    {
-        self.heap.first()
-    }
-
-    pub fn pop(&mut self) -> Option<X>
-    {
-        if self.heap.len() <= 2 {
-            self.heap.pop()
-        } else {
-            let pop = self.heap.swap_remove(0);
-            self.percolate_down(0);
-            Some(pop)
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item=&X>
-    {
-        self.heap.iter()
-    }
 }
 
 
@@ -136,6 +182,7 @@ impl<X,C> IntoIterator for TopSet<X,C>
     type Item = X;
     type IntoIter = <Vec<X> as IntoIterator>::IntoIter;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.heap.into_iter()
     }
@@ -146,7 +193,7 @@ impl<X,C> Extend<X> for TopSet<X,C>
 {
     fn extend<T: IntoIterator<Item=X>>(&mut self, iter: T) {
         iter.into_iter()
-            .for_each(|x| { self.push(x); } )
+            .for_each(|x| { self.insert(x); } )
     }
 }
 
