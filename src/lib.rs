@@ -28,7 +28,7 @@
 //!     // (we need to reverse the comparison function)
 //!     TopIter::new(4)
 //!         .with_init(items)
-//!         .with_compare(|a,b| b.cmp(a))
+//!         .with_selector(|a,b| *a < *b)
 //!         .into_iter()
 //!         .for_each(|x| eprintln!("in the last 4: {}", x));
 //! }

@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-use std::cmp::Ordering::Greater;
 use std::fmt::{Debug, Formatter};
 use std::mem;
 
@@ -13,20 +11,20 @@ pub struct TopSet<X,C>
 {
     heap: Vec<X>, // a heap with the greatest at the end
     count: usize,
-    cmp: C
+    beat: C
 }
 
 impl<X,C> TopSet<X,C>
-    where C: Fn(&X,&X) -> Ordering
+    where C: Fn(&X,&X) -> bool
 {
     /// Creates a new top set with a
-    pub fn new(n: usize, cmp: C) -> Self
+    pub fn new(n: usize, beat: C) -> Self
     {
         assert!(n > 0);
         Self {
             heap: Vec::with_capacity(n),
             count: n,
-            cmp
+            beat
         }
     }
 
@@ -42,10 +40,10 @@ impl<X,C> TopSet<X,C>
         self.count = n;
     }
 
-    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, cmp: C) -> Self
+    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
     {
         assert!(n > 0);
-        let mut top = Self::new(n, cmp);
+        let mut top = Self::new(n, beat);
         top.extend(init);
         top
     }
@@ -56,7 +54,7 @@ impl<X,C> TopSet<X,C>
         while i > 0 { // so has a parent (not root)
             let parent = (i-1)/2;
             // put the greatest the deepest
-            if (self.cmp)(&self.heap[parent], &self.heap[i]) == Greater {
+            if (self.beat)(&self.heap[parent], &self.heap[i]) {
                 self.heap.swap(parent, i);
                 i = parent;
             } else {
@@ -71,18 +69,18 @@ impl<X,C> TopSet<X,C>
             let mut child = 2*i+1;
             if child < self.heap.len()-1 {
                 // to put the greatest the deepest -> select the greatest child
-                if (self.cmp)(&self.heap[child], &self.heap[child+1]) == Greater {
+                if (self.beat)(&self.heap[child], &self.heap[child+1]) {
                     child += 1;
                 }
                 // put the greatest the deepest
-                if (self.cmp)(&self.heap[i], &self.heap[child]) == Greater {
+                if (self.beat)(&self.heap[i], &self.heap[child]) {
                     self.heap.swap(i, child);
                     i = child;
                 } else {
                     break;
                 }
             } else {
-                if (child == self.heap.len() - 1) && (self.cmp)(&self.heap[i], &self.heap[child]) == Greater {
+                if (child == self.heap.len() - 1) && (self.beat)(&self.heap[i], &self.heap[child]) {
                     // only one child
                     self.heap.swap(i, child);
                 }
@@ -101,7 +99,7 @@ impl<X,C> TopSet<X,C>
             None
 
         } else {
-            if (self.cmp)(&x, &self.heap[0]) == Greater {
+            if (self.beat)(&x, &self.heap[0]) {
                 // put the greatest the deepest: the new one should be kept
                 mem::swap(&mut x, &mut self.heap[0]);
                 self.percolate_down(0);
@@ -144,7 +142,7 @@ impl<X,C> IntoIterator for TopSet<X,C>
 }
 
 impl<X,C> Extend<X> for TopSet<X,C>
-    where C: Fn(&X,&X) -> Ordering
+    where C: Fn(&X,&X) -> bool
 {
     fn extend<T: IntoIterator<Item=X>>(&mut self, iter: T) {
         iter.into_iter()
@@ -169,7 +167,7 @@ mod tests {
     #[test]
     fn cost()
     {
-        let mut top = TopSet::<f32,_>::new(5, |a, b| b.partial_cmp(a).unwrap());
+        let mut top = TopSet::<f32,_>::new(5, f32::lt);
         top.extend(vec![81.5, 4.5,4.,1.,45.,22.,11.]);
         dbg!(&top);
         top.extend(vec![81.5, 4.5,4.,1.,45.,22.,11.]);
@@ -179,7 +177,7 @@ mod tests {
     #[test]
     fn ord()
     {
-        let mut top = TopSet::<u32,_>::new(5, u32::cmp);
+        let mut top = TopSet::<u32,_>::new(5, u32::gt);
         top.extend(vec![81,5, 4,5,4,1,45,22,1,5,97,5,877,12,0]);
         dbg!(&top);
     }
