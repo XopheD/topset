@@ -38,6 +38,22 @@ impl<X,C> TopSet<X,C>
         }
     }
 
+    /// Check if the top set is empty
+    #[inline]
+    pub fn is_empty(&self) -> bool { self.heap.is_empty() }
+
+    /// Get the number of stored items.
+    ///
+    /// It never exceeds the predefined capacity.
+    #[inline]
+    pub fn len(&self) -> usize { self.heap.len() }
+
+    /// Get the capacity of this top set
+    ///
+    /// This capacity could only change by calling [`resize`].
+    #[inline]
+    pub fn capacity(&self) -> usize { self.count }
+
     /// Creates a new top set with a selecting closure and an initial set of items.
     ///
     /// If the initial set contains more than `n` elements, only the `n` greatest ones
@@ -134,6 +150,7 @@ impl<X,C> TopSet<X,C>
     }
 
 
+    // internal stuff
     fn percolate_up(&mut self, mut i: usize)
     {
         while i > 0 { // so has a parent (not root)
@@ -148,6 +165,7 @@ impl<X,C> TopSet<X,C>
         }
     }
 
+    // internal stuff
     fn percolate_down(&mut self, mut i: usize)
     {
         loop {
