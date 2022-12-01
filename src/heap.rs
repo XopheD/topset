@@ -1,43 +1,10 @@
+use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::mem;
-
-/// A top N set of items.
-///
-/// This set contains no more than N items.
-/// When this limit is reached, the smallest (according to
-/// the specified comparison) is thrown.
-///
-/// Comparing two elements is done by a duel, resolved by a provided closure:
-/// if `true` is returned, the first item wins, if `false` the second.
-///
-/// By the way, using [`PartialOrd::gt`]
-/// will select the top elements and [`PartialOrd::lt`] will select the lowest.
-///
-/// Of course, any closure could be used but it should satisfy the transitivity.
-/// In other words, if `a` beats `b` and `b` beats `c` then `a` should beat `c` too.
-///
-#[derive(Clone)]
-pub struct TopSet<X,C>
-{
-    heap: Vec<X>, // a heap with the greatest at the end
-    count: usize,
-    beat: C
-}
+use crate::TopSet;
 
 impl<X,C> TopSet<X,C>
-    where C: Fn(&X,&X) -> bool
 {
-    /// Creates a new top set with a selecting closure.
-    pub fn new(n: usize, beat: C) -> Self
-    {
-        assert!(n > 0);
-        Self {
-            heap: Vec::with_capacity(n),
-            count: n,
-            beat
-        }
-    }
-
     /// Check if the top set is empty
     #[inline]
     pub fn is_empty(&self) -> bool { self.heap.is_empty() }
@@ -54,6 +21,52 @@ impl<X,C> TopSet<X,C>
     #[inline]
     pub fn capacity(&self) -> usize { self.count }
 
+    /// Read access to the lowest item of the top set
+    ///
+    /// Notice that it actually returned the _lowest_ one and
+    /// so all the others are better (or equal) this one.
+    #[inline]
+    pub fn peek(&self) -> Option<&X>
+    {
+        self.heap.first()
+    }
+
+
+    /// Iterate over all the top selected items.
+    ///
+    /// The iterator is **not** sorted. A sorted iteration
+    /// could be obtained by iterative call to [`Self::pop`]
+    /// or by using [`Self::into_iter_sorted`].
+    ///
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item=&X>
+    {
+        self.heap.iter()
+    }
+
+    /// Gets all the top set elements in a vector.
+    ///
+    /// This vector is **not** sorted.
+    /// See [`Self::into_sorted_vec`] if a sorted result is expected.
+    #[inline]
+    pub fn into_vec(self) -> Vec<X> { self.heap }
+
+}
+
+impl<X,C> TopSet<X,C>
+    where C: Fn(&X,&X) -> bool
+{
+    /// Creates a new top set with a selecting closure.
+    pub fn new(n: usize, beat: C) -> Self
+    {
+        assert!(n > 0);
+        Self {
+            heap: Vec::with_capacity(n),
+            count: n,
+            beat
+        }
+    }
+
     /// Creates a new top set with a selecting closure and an initial set of items.
     ///
     /// If the initial set contains more than `n` elements, only the `n` greatest ones
@@ -66,30 +79,12 @@ impl<X,C> TopSet<X,C>
         top
     }
 
-
-    /// Resize the top set
-    ///
-    /// If the size decreases, then the lowest items are removed.
-    /// If the size increases, nothing else happens but there is still more room
-    /// for next insertions.
-    pub fn resize(&mut self, n: usize)
-    {
-        if self.count < n {
-            self.heap.reserve(n - self.count);
-        } else {
-            while self.heap.len() > n {
-                self.pop();
-            }
-        }
-        self.count = n;
-    }
-
     /// Insert a new item.
     ///
     /// If the top set is not filled, the item is simply added and `None` is returned.
     ///
     /// If there is no more room, then one item should be rejected:
-    /// * if the new item is better than some already stored ones, it is added and
+    /// * if the new item is better than some already stored ones, it is added
     /// and the removed item is returned
     /// * if the new item is worse than all the stored ones, it is returned
     pub fn insert(&mut self, mut x: X) -> Option<X>
@@ -110,14 +105,49 @@ impl<X,C> TopSet<X,C>
         }
     }
 
-    /// Read access to the lowest item of the top set
+    /// Converts this topset into a sorted iterator
     ///
-    /// Notice that it actually returned the _lowest_ one and
-    /// so all the others are better (or equal) this one.
+    /// Notice that the _lowest_ item of the top set is the
+    /// first one. The _greatest_ item is the last one.
     #[inline]
-    pub fn peek(&self) -> Option<&X>
+    pub fn into_iter_sorted(self) -> crate::iter::IntoIterSorted<X,C> {
+        crate::iter::IntoIterSorted(self)
+    }
+
+    /// Returns the topset in a sorted vector.
+    ///
+    /// The first element of the vector is the _lowest_ item of the top set
+    /// and the last one is the _greatest_ one.
+    pub fn into_sorted_vec(mut self) -> Vec<X>
+        where X:PartialEq
     {
-        self.heap.first()
+        self.heap.sort_unstable_by(|a,b| {
+            if *a == *b {
+                Ordering::Equal
+            } else if (self.beat)(a,b) {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        });
+        self.heap
+    }
+
+    /// Resize the top set
+    ///
+    /// If the size decreases, then the lowest items are removed.
+    /// If the size increases, nothing else happens but there is still more room
+    /// for next insertions.
+    pub fn resize(&mut self, n: usize)
+    {
+        if self.count < n {
+            self.heap.reserve(n - self.count);
+        } else {
+            while self.heap.len() > n {
+                self.pop();
+            }
+        }
+        self.count = n;
     }
 
     /// Pop the lowest item of the top set
@@ -138,19 +168,8 @@ impl<X,C> TopSet<X,C>
         }
     }
 
-    /// Iterate over all the top selected items.
-    ///
-    /// The iterator is **not** sorted. A sorted iteration
-    /// could be obtained by iterative call to [`Self::pop`].
-    ///
-    #[inline]
-    pub fn iter(&self) -> impl Iterator<Item=&X>
-    {
-        self.heap.iter()
-    }
-
-
     // internal stuff
+    // move i up (to the best)
     fn percolate_up(&mut self, mut i: usize)
     {
         while i > 0 { // so has a parent (not root)
@@ -166,6 +185,7 @@ impl<X,C> TopSet<X,C>
     }
 
     // internal stuff
+    // move i as deep as possible
     fn percolate_down(&mut self, mut i: usize)
     {
         loop {
@@ -203,6 +223,17 @@ impl<X,C> IntoIterator for TopSet<X,C>
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.heap.into_iter()
+    }
+}
+
+impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
+{
+    type Item = &'a X;
+    type IntoIter = <&'a Vec<X> as IntoIterator>::IntoIter;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.heap).into_iter()
     }
 }
 
@@ -245,5 +276,20 @@ mod tests {
         let mut top = TopSet::<u32,_>::new(5, u32::gt);
         top.extend(vec![81,5, 4,5,4,1,45,22,1,5,97,5,877,12,0]);
         dbg!(&top);
+    }
+
+    #[test]
+    fn top()
+    {
+        let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
+
+        // getting the four greatest integers (repeating allowed)
+        TopSet::with_init(4, items.iter().copied(), u32::gt)
+            .into_iter().for_each(|x| eprintln!("in the top 4: {}", x));
+
+        // getting the four smallest integers
+        // (we just need to reverse the comparison function)
+        TopSet::with_init(4,items.into_iter(), u32::lt)
+            .into_iter().for_each(|x| eprintln!("in the last 4: {}", x));
     }
 }

@@ -1,36 +1,24 @@
-//! # Top N selector
+//! # Top N set
 //!
 //! This crate provides a _topset_ which selects a given number of greatest items.
 //! The criterium used to sort the items could be specified as a closure.
 //! It is based internally on a binary heap with a fixed size.
 //!
-//! ## Top N iterator
-//!
-//! This is convenient way to build an iterator around
-//! the N greatest items of a collection.
-//!
-//! _Note:_ the returned items are unsorted.
-//!
 //! ```
-//! use topset::TopIter;
+//! use topset::*;
 //!
 //! fn main()
 //! {
 //!     let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
 //!
 //!     // getting the four greatest integers (repeating allowed)
-//!     TopIter::new(4)
-//!         .with_init(items.iter())
-//!         .into_iter()
-//!         .for_each(|x| eprintln!("in the top 4: {}", x));
+//!     TopSet::with_init(4, items.iter().copied(), u32::gt)
+//!         .into_iter().for_each(|x| eprintln!("in the top 4: {}", x));
 //!
 //!     // getting the four smallest integers
-//!     // (we need to reverse the comparison function)
-//!     TopIter::new(4)
-//!         .with_init(items)
-//!         .with_selector(|a,b| *a < *b)
-//!         .into_iter()
-//!         .for_each(|x| eprintln!("in the last 4: {}", x));
+//!     // (we just need to reverse the comparison function)
+//!     TopSet::with_init(4,items.into_iter(), u32::lt)
+//!         .into_iter().for_each(|x| eprintln!("in the last 4: {}", x));
 //! }
 //! ```
 //! will produce (possibly in an different order):
@@ -44,20 +32,34 @@
 //! in the last 4: 1
 //! in the last 4: 2
 //! ```
-//!
-//! ## Top N set
-//!
-//! Instead of manipulation an iterator, this provides a set containing the N greatest items.
 
-
-mod iter;
-pub use iter::TopIter;
-
+pub mod iter;
 mod heap;
-pub use heap::TopSet;
 
-#[inline]
-pub fn topiter(n: usize) -> TopIter
+
+/// A top N set of items.
+///
+/// This set contains no more than N items.
+/// When this limit is reached, the smallest (according to
+/// the specified comparison) is thrown.
+///
+/// Comparing two elements is done by a duel, resolved by a provided closure:
+/// if `true` is returned, the first item wins, if `false` the second.
+///
+/// By the way, using [`PartialOrd::gt`]
+/// will select the top elements and [`PartialOrd::lt`]
+/// will select the lowest.
+///
+/// Of course, any closure could be used but it should satisfy the transitivity.
+/// In other words, if `a` beats `b` and `b` beats `c` then `a` should beat `c` too.
+/// If it is not the case, the results are unpredictable.
+///
+#[derive(Clone)]
+pub struct TopSet<X,C>
 {
-    TopIter::new(n)
+    heap: Vec<X>, // a heap with the greatest at the end
+    count: usize,
+    beat: C
 }
+
+
