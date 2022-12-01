@@ -1,4 +1,4 @@
-# Top N selector
+# Top N Set
 [![Crates.io](https://img.shields.io/crates/v/topset?style=flat)](https://crates.io/crates/topset)
 [![Crates.io](https://img.shields.io/crates/d/topset?style=flat)](https://crates.io/crates/topset)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat)](https://crates.io/crates/topset)
@@ -8,10 +8,8 @@ This crate provides a _topset_ which selects a given number of greatest items.
 The criterium used to sort the items could be specified as a closure.
 It is based internally on a binary heap with a fixed size.
 
-## Top N iterator
-
-This is convenient way to build an iterator around
-the N greatest items of a collection.
+The struct `TopSet` could be used directly or through the trait `TopSetReducing`
+which automatically extend the iterator trait.
 
 _Note:_ the returned items are unsorted.
 
@@ -24,18 +22,18 @@ fn main()
     let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
     
     // getting the four greatest integers (repeating allowed)
-    TopIter::new(4)
-        .with_init(items.iter())
-        .into_iter()
-        .for_each(|x| eprintln!("in the top 4: {}", x));
-    
+    items.clone().into_iter()
+            .topset(4, i32::gt)
+            .into_iter()
+            .for_each(|x| eprintln!("in the top 4: {}", x));
+
     // getting the four smallest integers
-    // (we need to reverse the comparison function)
-    TopIter::new(4)
-        .with_init(items)
-        .with_compare(|a,b| b.cmp(a))
-        .into_iter()
-        .for_each(|x| eprintln!("in the last 4: {}", x));
+    // (we just need to reverse the comparison function)
+    items.into_iter()
+            .topset(4, i32::lt)
+            .into_iter()
+            .for_each(|x| eprintln!("in the last 4: {}", x));
+    let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
 }
 ```
 will produce (possibly in an different order):
@@ -49,7 +47,3 @@ in the last 4: 3
 in the last 4: 1
 in the last 4: 2
 ```
-
-## Top N set
-
-Instead of manipulation an iterator, this provides a set containing the N greatest items.
