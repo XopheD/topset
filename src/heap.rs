@@ -4,8 +4,31 @@ use std::mem;
 use crate::TopSet;
 
 impl<X,C> TopSet<X,C>
-    where C: Fn(&X,&X) -> bool
+    where C: FnMut(&X,&X) -> bool
 {
+    /// Creates a new top set with a selecting closure.
+    pub fn new(n: usize, beat: C) -> Self
+    {
+        assert!(n > 0);
+        Self {
+            heap: Vec::with_capacity(n),
+            count: n,
+            beat
+        }
+    }
+
+    /// Creates a new top set with a selecting closure and an initial set of items.
+    ///
+    /// If the initial set contains more than `n` elements, only the `n` greatest ones
+    /// (according to `beat` selector) are stored.
+    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
+    {
+        assert!(n > 0);
+        let mut top = Self::new(n, beat);
+        top.extend(init);
+        top
+    }
+
     /// Check if the top set is empty
     #[inline]
     pub fn is_empty(&self) -> bool { self.heap.is_empty() }
@@ -32,7 +55,6 @@ impl<X,C> TopSet<X,C>
         self.heap.first()
     }
 
-
     /// Iterate over all the top selected items.
     ///
     /// The iterator is **not** sorted. A sorted iteration
@@ -51,29 +73,6 @@ impl<X,C> TopSet<X,C>
     /// See [`Self::into_sorted_vec`] if a sorted result is expected.
     #[inline]
     pub fn into_vec(self) -> Vec<X> { self.heap }
-
-    /// Creates a new top set with a selecting closure.
-    pub fn new(n: usize, beat: C) -> Self
-    {
-        assert!(n > 0);
-        Self {
-            heap: Vec::with_capacity(n),
-            count: n,
-            beat
-        }
-    }
-
-    /// Creates a new top set with a selecting closure and an initial set of items.
-    ///
-    /// If the initial set contains more than `n` elements, only the `n` greatest ones
-    /// (according to `beat` selector) are stored.
-    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
-    {
-        assert!(n > 0);
-        let mut top = Self::new(n, beat);
-        top.extend(init);
-        top
-    }
 
     /// Insert a new item.
     ///
@@ -107,7 +106,7 @@ impl<X,C> TopSet<X,C>
     /// first one. The _greatest_ item is the last one.
     #[inline]
     pub fn into_iter_sorted(self) -> crate::iter::IntoIterSorted<X,C> {
-        crate::iter::IntoIterSorted(self)
+        self.into()
     }
 
     /// Returns the topset in a sorted vector.
@@ -155,12 +154,14 @@ impl<X,C> TopSet<X,C>
     /// in a sorted way (from the lowest to the best).
     pub fn pop(&mut self) -> Option<X>
     {
-        if self.heap.len() <= 2 {
-            self.heap.pop()
-        } else {
-            let pop = self.heap.swap_remove(0);
-            self.percolate_down(0);
-            Some(pop)
+        match self.heap.len() {
+            0 => None,
+            1|2 => Some(self.heap.swap_remove(0)),
+            _ => {
+                let pop = self.heap.swap_remove(0);
+                self.percolate_down(0);
+                Some(pop)
+            }
         }
     }
 
@@ -212,6 +213,7 @@ impl<X,C> TopSet<X,C>
 
 
 impl<X,C> IntoIterator for TopSet<X,C>
+    where C: FnMut(&X,&X) -> bool
 {
     type Item = X;
     type IntoIter = <Vec<X> as IntoIterator>::IntoIter;
@@ -223,6 +225,7 @@ impl<X,C> IntoIterator for TopSet<X,C>
 }
 
 impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
+    where C: FnMut(&X,&X) -> bool
 {
     type Item = &'a X;
     type IntoIter = <&'a Vec<X> as IntoIterator>::IntoIter;
@@ -234,16 +237,17 @@ impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
 }
 
 impl<X,C> Extend<X> for TopSet<X,C>
-    where C: Fn(&X,&X) -> bool
+    where C: FnMut(&X,&X) -> bool
 {
+    #[inline]
     fn extend<T: IntoIterator<Item=X>>(&mut self, iter: T) {
-        iter.into_iter()
-            .for_each(|x| { self.insert(x); } )
+        iter.into_iter().for_each(|x| { self.insert(x); } )
     }
 }
 
+
 impl<X,C> Debug for TopSet<X,C>
-    where X:Debug
+    where X:Debug, C: FnMut(&X,&X) -> bool
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.heap.fmt(f)
@@ -254,38 +258,61 @@ impl<X,C> Debug for TopSet<X,C>
 
 #[cfg(test)]
 mod tests {
+    use crate::iter::TopSetReducing;
     use crate::TopSet;
 
     #[test]
-    fn cost()
+    fn lowest_cost()
     {
         let mut top = TopSet::<f32,_>::new(5, f32::lt);
-        top.extend(vec![81.5, 4.5,4.,1.,45.,22.,11.]);
-        dbg!(&top);
-        top.extend(vec![81.5, 4.5,4.,1.,45.,22.,11.]);
-        dbg!(top);
+        top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
+        top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
+
+        assert_eq![ top.pop(), Some(4.5) ];
+        assert_eq![ top.pop(), Some(4.) ];
+        assert_eq![ top.pop(), Some(4.) ];
+        assert_eq![ top.pop(), Some(1.) ];
+        assert_eq![ top.pop(), Some(1.) ];
+        assert_eq![ top.pop(), None ];
     }
 
     #[test]
-    fn ord()
+    fn greatest_score()
     {
-        let mut top = TopSet::<u32,_>::new(5, u32::gt);
-        top.extend(vec![81,5, 4,5,4,1,45,22,1,5,97,5,877,12,0]);
-        dbg!(&top);
+        assert_eq![
+            vec![81,5, 4,5,4,1,45,22,1,5,97,5,877,12,0]
+            .into_iter()
+            .topset(5, u32::gt)
+            .into_iter()
+            .last(),
+            Some(877)];
     }
 
-    #[test]
-    fn top()
+    /*    fn top()
     {
-        let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
+        let items = vec![4, 5, 9, 2, 3, 8, 4, 7, 8, 1];
 
         // getting the four greatest integers (repeating allowed)
-        TopSet::with_init(4, items.iter().copied(), u32::gt)
-            .into_iter().for_each(|x| eprintln!("in the top 4: {}", x));
+        items.clone().into_iter()
+            .topset(4, i32::gt)
+            .into_iter_sorted()
+            .for_each(|x| eprintln!("in the top 4: {}", x));
+
+        let mut i =  items.clone().into_iter()
+            .topset(4, i32::gt);
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
+        eprintln!("in the top 4: {:?}", i.pop());
 
         // getting the four smallest integers
         // (we just need to reverse the comparison function)
-        TopSet::with_init(4,items.into_iter(), u32::lt)
-            .into_iter().for_each(|x| eprintln!("in the last 4: {}", x));
-    }
+        items.into_iter()
+            .topset(4, i32::lt)
+            .into_iter_sorted()
+            .for_each(|x| eprintln!("in the last 4: {}", x));
+    }*/
 }

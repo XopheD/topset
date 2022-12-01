@@ -4,6 +4,9 @@
 //! The criterium used to sort the items could be specified as a closure.
 //! It is based internally on a binary heap with a fixed size.
 //!
+//! The struct [`TopSet`] could be used directly or through the trait [`TopSetReducing`]
+//! which automatically extend the iterator trait.
+//!
 //! ```
 //! use topset::*;
 //!
@@ -12,13 +15,17 @@
 //!     let items = vec![4, 5, 8, 3, 2, 1, 4, 7, 9, 8];
 //!
 //!     // getting the four greatest integers (repeating allowed)
-//!     TopSet::with_init(4, items.iter().copied(), u32::gt)
-//!         .into_iter().for_each(|x| eprintln!("in the top 4: {}", x));
+//!     items.clone().into_iter()
+//!             .topset(4, i32::gt)
+//!             .into_iter()
+//!             .for_each(|x| eprintln!("in the top 4: {}", x));
 //!
 //!     // getting the four smallest integers
 //!     // (we just need to reverse the comparison function)
-//!     TopSet::with_init(4,items.into_iter(), u32::lt)
-//!         .into_iter().for_each(|x| eprintln!("in the last 4: {}", x));
+//!     items.into_iter()
+//!             .topset(4, i32::lt)
+//!             .into_iter()
+//!             .for_each(|x| eprintln!("in the last 4: {}", x));
 //! }
 //! ```
 //! will produce (possibly in an different order):
@@ -28,14 +35,14 @@
 //! in the top 4: 9
 //! in the top 4: 8
 //! in the last 4: 4
+//! in the last 4: 2
 //! in the last 4: 3
 //! in the last 4: 1
-//! in the last 4: 2
 //! ```
 
-pub mod iter;
 mod heap;
-
+pub mod iter;
+pub use iter::TopSetReducing;
 
 /// A top N set of items.
 ///
@@ -56,6 +63,7 @@ mod heap;
 ///
 #[derive(Clone)]
 pub struct TopSet<X,C>
+    where C: FnMut(&X,&X) -> bool
 {
     heap: Vec<X>, // a heap with the greatest at the end
     count: usize,
