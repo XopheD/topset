@@ -4,6 +4,7 @@ use std::mem;
 use crate::TopSet;
 
 impl<X,C> TopSet<X,C>
+    where C: Fn(&X,&X) -> bool
 {
     /// Check if the top set is empty
     #[inline]
@@ -51,11 +52,6 @@ impl<X,C> TopSet<X,C>
     #[inline]
     pub fn into_vec(self) -> Vec<X> { self.heap }
 
-}
-
-impl<X,C> TopSet<X,C>
-    where C: Fn(&X,&X) -> bool
-{
     /// Creates a new top set with a selecting closure.
     pub fn new(n: usize, beat: C) -> Self
     {

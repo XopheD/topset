@@ -4,6 +4,7 @@ use crate::TopSet;
 pub struct IntoIterSorted<X,C>(pub(crate) TopSet<X,C>);
 
 impl<X,C> IntoIterSorted<X,C>
+    where C: Fn(&X,&X) -> bool
 {
     #[inline] pub fn peek(&mut self) -> Option<&X> { self.0.peek() }
 }
@@ -30,6 +31,19 @@ impl<X,C> ExactSizeIterator for IntoIterSorted<X,C>
     // #[inline] fn is_empty(&self) -> bool { self.0.is_empty() }
 }
 
+pub trait TopSetReducing {
+    type Item;
+    fn topset<C:Fn(&Self::Item,&Self::Item)->bool>(self, n:usize, beat:C) -> TopSet<Self::Item,C>;
+}
+
+impl<I:Iterator> TopSetReducing for I {
+    type Item = I::Item;
+
+    fn topset<C: Fn(&Self::Item, &Self::Item) -> bool>(mut self, n: usize, beat: C) -> TopSet<Self::Item, C>
+    {
+        self.fold(TopSet::new(n,beat), |mut top, e| { top.insert(e); top })
+    }
+}
 
 // Unstable but it’s true !!!
 // impl<X,C:Fn(&X,&X)->bool> TrustedLen for IntoIterSorted<X,C> { }
