@@ -13,7 +13,7 @@ impl<X,C> TopSet<X,C>
         Self {
             heap: Vec::with_capacity(n),
             count: n,
-            beat
+            beat: beat.into()
         }
     }
 
@@ -55,6 +55,18 @@ impl<X,C> TopSet<X,C>
         self.heap.first()
     }
 
+    /// Checks if an item will be inserted or not
+    ///
+    /// If it `true` is returned, it means that a call to [`Self::insert`]
+    /// will actually insert the candidate. If `false`, then the insertion
+    /// will be a non-op.
+    ///
+    /// Note that in any case the insertion is not done.
+    #[inline]
+    pub fn is_candidate(&self, x: &X) -> bool {
+        self.heap.len() < self.count || (self.beat.borrow_mut())(x, self.peek().unwrap())
+    }
+
     /// Iterate over all the top selected items.
     ///
     /// The iterator is **not** sorted. A sorted iteration
@@ -91,7 +103,7 @@ impl<X,C> TopSet<X,C>
             None
 
         } else {
-            if (self.beat)(&x, &self.heap[0]) {
+            if (self.beat.borrow_mut())(&x, &self.heap[0]) {
                 // put the greatest the deepest: the new one should be kept
                 mem::swap(&mut x, &mut self.heap[0]);
                 self.percolate_down(0);
@@ -119,7 +131,7 @@ impl<X,C> TopSet<X,C>
         self.heap.sort_unstable_by(|a,b| {
             if *a == *b {
                 Ordering::Equal
-            } else if (self.beat)(a,b) {
+            } else if (self.beat.borrow_mut())(a,b) {
                 Ordering::Greater
             } else {
                 Ordering::Less
@@ -172,7 +184,7 @@ impl<X,C> TopSet<X,C>
         while i > 0 { // so has a parent (not root)
             let parent = (i-1)/2;
             // put the greatest the deepest
-            if (self.beat)(&self.heap[parent], &self.heap[i]) {
+            if (self.beat.borrow_mut())(&self.heap[parent], &self.heap[i]) {
                 self.heap.swap(parent, i);
                 i = parent;
             } else {
@@ -189,18 +201,18 @@ impl<X,C> TopSet<X,C>
             let mut child = 2*i+1;
             if child < self.heap.len()-1 {
                 // to put the greatest the deepest -> select the greatest child
-                if (self.beat)(&self.heap[child], &self.heap[child+1]) {
+                if (self.beat.borrow_mut())(&self.heap[child], &self.heap[child+1]) {
                     child += 1;
                 }
                 // put the greatest the deepest
-                if (self.beat)(&self.heap[i], &self.heap[child]) {
+                if (self.beat.borrow_mut())(&self.heap[i], &self.heap[child]) {
                     self.heap.swap(i, child);
                     i = child;
                 } else {
                     break;
                 }
             } else {
-                if (child == self.heap.len() - 1) && (self.beat)(&self.heap[i], &self.heap[child]) {
+                if (child == self.heap.len() - 1) && (self.beat.borrow_mut())(&self.heap[i], &self.heap[child]) {
                     // only one child
                     self.heap.swap(i, child);
                 }

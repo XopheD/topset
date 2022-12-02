@@ -42,6 +42,8 @@
 
 mod heap;
 pub mod iter;
+
+use std::cell::RefCell;
 pub use iter::TopSetReducing;
 
 /// A top N set of items.
@@ -67,7 +69,7 @@ pub struct TopSet<X,C>
 {
     heap: Vec<X>, // a heap with the greatest at the end
     count: usize,
-    beat: C
+    beat: RefCell<C>
 }
 
 

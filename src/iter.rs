@@ -24,7 +24,7 @@ impl<X,C> Iterator for IntoIterSorted<X,C>
     #[inline] fn count(self) -> usize { self.0.len() }
     #[inline] fn size_hint(&self) -> (usize, Option<usize>) { (self.0.len(), Some(self.0.len())) }
     #[inline] fn last(mut self) -> Option<X> {
-        self.0.heap.into_iter().reduce(|a,b| if (self.0.beat)(&a,&b) {a} else {b})
+        self.0.heap.into_iter().reduce(|a,b| if (self.0.beat.borrow_mut())(&a,&b) {a} else {b})
     }
 }
 
