@@ -7,6 +7,23 @@ impl<X,C> TopSet<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     /// Creates a new top set with a selecting closure.
+    ///
+    /// The size corresponds to the maximum number of items
+    /// allowed in the top set.
+    ///
+    /// The function `C` is the challenge to decide if an
+    /// element beats another one and so takes its place.
+    /// It should corresponds to a total ordering.
+    ///
+    /// If the first one beats the second one then `true` should
+    /// be returned and if `false' corresponds to the case when
+    /// the second item beats the first one.
+    /// This function should always returns the same result
+    /// when dealing with the same items or results are unpredictable.
+    ///
+    /// ## Example
+    /// Collecting the 5 greatest integers is performed by using a
+    /// topset with `n = 5` and `beat = i32::gt`.
     pub fn new(n: usize, beat: C) -> Self
     {
         Self {
@@ -19,7 +36,7 @@ impl<X,C> TopSet<X,C>
     /// Creates a new top set with a selecting closure and an initial set of items.
     ///
     /// If the initial set contains more than `n` elements, only the `n` greatest ones
-    /// (according to `beat` selector) are stored.
+    /// (according to `beat` challenging function) are stored.
     pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
     {
         let mut top = Self::new(n, beat);
@@ -34,12 +51,13 @@ impl<X,C> TopSet<X,C>
     /// Get the number of stored items.
     ///
     /// It never exceeds the predefined capacity
-    /// (the capacity does not grow by itself, only by [`Self::resize`]).
+    /// (the capacity does not grow by itself, only by calling [`Self::resize`]).
     #[inline]
     pub fn len(&self) -> usize { self.heap.len() }
 
     /// Get the capacity of this top set
     ///
+    /// The capacity limits the number of elements to keep.
     /// This capacity could only change by calling [`resize`].
     #[inline]
     pub fn capacity(&self) -> usize { self.count }
@@ -60,7 +78,8 @@ impl<X,C> TopSet<X,C>
     /// will actually insert the candidate. If `false`, then the insertion
     /// will be a non-op.
     ///
-    /// Note that in any case the insertion is not done.
+    /// Note that in any case the insertion is not done. See [`Self::insert`] to
+    /// perform the test and the insertion in one time.
     #[inline]
     pub fn is_candidate(&self, x: &X) -> bool {
         self.heap.len() < self.count || self.beat(x, self.peek().unwrap())
@@ -87,12 +106,14 @@ impl<X,C> TopSet<X,C>
 
     /// Insert a new item.
     ///
-    /// If the top set is not filled, the item is simply added and `None` is returned.
+    /// If the top set is not filled (i.e. its length is less than its capacity),
+    /// the item is simply added and `None` is returned.
     ///
     /// If there is no more room, then one item should be rejected:
     /// * if the new item is better than some already stored ones, it is added
     /// and the removed item is returned
     /// * if the new item is worse than all the stored ones, it is returned
+    ///
     pub fn insert(&mut self, mut x: X) -> Option<X>
     {
         if self.heap.len() < self.count {
@@ -103,7 +124,7 @@ impl<X,C> TopSet<X,C>
         } else {
             // SAFETY: if the heap is empty when self.count != 0, then we fall
             // in the previous if condition (so, here, get_unchecked is safe)
-            if self.count != 0 || self.beat(&x, unsafe { self.heap.get_unchecked(0) }) {
+            if self.count != 0 && self.beat(&x, unsafe { self.heap.get_unchecked(0) }) {
                 // put the greatest the deepest: the new one should be kept
                 mem::swap(&mut x, &mut self.heap[0]);
                 self.percolate_down(0);
@@ -285,7 +306,7 @@ mod tests {
         let mut top = TopSet::<f32,_>::new(5, f32::lt);
         top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
         top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
-dbg!(& )
+
         assert_eq![ top.pop(), Some(4.5) ];
         assert_eq![ top.pop(), Some(4.) ];
         assert_eq![ top.pop(), Some(4.) ];
