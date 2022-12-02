@@ -64,7 +64,7 @@ impl<X,C> TopSet<X,C>
     /// Note that in any case the insertion is not done.
     #[inline]
     pub fn is_candidate(&self, x: &X) -> bool {
-        self.heap.len() < self.count || (self.beat.borrow_mut())(x, self.peek().unwrap())
+        self.heap.len() < self.count || self.beat(x, self.peek().unwrap())
     }
 
     /// Iterate over all the top selected items.
@@ -103,7 +103,7 @@ impl<X,C> TopSet<X,C>
             None
 
         } else {
-            if (self.beat.borrow_mut())(&x, &self.heap[0]) {
+            if self.beat(&x, &self.heap[0]) {
                 // put the greatest the deepest: the new one should be kept
                 mem::swap(&mut x, &mut self.heap[0]);
                 self.percolate_down(0);
@@ -180,6 +180,9 @@ impl<X,C> TopSet<X,C>
     /// Removes all the elements in the top set
     #[inline] pub fn clear(&mut self) { self.heap.clear() }
 
+    /// Checks if an element beats the other
+    #[inline] pub fn beat(&self, a:&X, b:&X) -> bool { self.beat.borrow_mut()(a,b) }
+
     // internal stuff
     // move i up (to the best)
     fn percolate_up(&mut self, mut i: usize)
@@ -187,7 +190,7 @@ impl<X,C> TopSet<X,C>
         while i > 0 { // so has a parent (not root)
             let parent = (i-1)/2;
             // put the greatest the deepest
-            if (self.beat.borrow_mut())(&self.heap[parent], &self.heap[i]) {
+            if self.beat(&self.heap[parent], &self.heap[i]) {
                 self.heap.swap(parent, i);
                 i = parent;
             } else {
@@ -204,18 +207,18 @@ impl<X,C> TopSet<X,C>
             let mut child = 2*i+1;
             if child < self.heap.len()-1 {
                 // to put the greatest the deepest -> select the greatest child
-                if (self.beat.borrow_mut())(&self.heap[child], &self.heap[child+1]) {
+                if self.beat(&self.heap[child], &self.heap[child+1]) {
                     child += 1;
                 }
                 // put the greatest the deepest
-                if (self.beat.borrow_mut())(&self.heap[i], &self.heap[child]) {
+                if self.beat(&self.heap[i], &self.heap[child]) {
                     self.heap.swap(i, child);
                     i = child;
                 } else {
                     break;
                 }
             } else {
-                if (child == self.heap.len() - 1) && (self.beat.borrow_mut())(&self.heap[i], &self.heap[child]) {
+                if (child == self.heap.len() - 1) && self.beat(&self.heap[i], &self.heap[child]) {
                     // only one child
                     self.heap.swap(i, child);
                 }
