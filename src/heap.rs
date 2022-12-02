@@ -177,6 +177,9 @@ impl<X,C> TopSet<X,C>
         }
     }
 
+    /// Removes all the elements in the top set
+    #[inline] pub fn clear(&mut self) { self.heap.clear() }
+
     // internal stuff
     // move i up (to the best)
     fn percolate_up(&mut self, mut i: usize)
