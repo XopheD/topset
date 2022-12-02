@@ -64,7 +64,7 @@ pub use iter::TopSetReducing;
 /// If it is not the case, the results are unpredictable.
 ///
 #[derive(Clone)]
-pub struct TopSet<X,C>
+pub struct TopSet<X:PartialEq,C>
     where C: FnMut(&X,&X) -> bool
 {
     heap: Vec<X>, // a heap with the greatest at the end

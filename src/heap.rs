@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 use std::mem;
 use crate::TopSet;
 
-impl<X,C> TopSet<X,C>
+impl<X:PartialEq,C> TopSet<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     /// Creates a new top set with a selecting closure.
@@ -147,7 +147,6 @@ impl<X,C> TopSet<X,C>
     /// The first element of the vector is the _lowest_ item of the top set
     /// and the last one is the _greatest_ one.
     pub fn into_sorted_vec(mut self) -> Vec<X>
-        where X:PartialEq
     {
         self.heap.sort_unstable_by(|a,b| {
             if *a == *b {
@@ -251,7 +250,7 @@ impl<X,C> TopSet<X,C>
 }
 
 
-impl<X,C> IntoIterator for TopSet<X,C>
+impl<X:PartialEq,C> IntoIterator for TopSet<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     type Item = X;
@@ -263,7 +262,7 @@ impl<X,C> IntoIterator for TopSet<X,C>
     }
 }
 
-impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
+impl<'a,X:PartialEq,C> IntoIterator for &'a TopSet<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     type Item = &'a X;
@@ -275,7 +274,7 @@ impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
     }
 }
 
-impl<X,C> Extend<X> for TopSet<X,C>
+impl<X:PartialEq,C> Extend<X> for TopSet<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     #[inline]
@@ -285,7 +284,7 @@ impl<X,C> Extend<X> for TopSet<X,C>
 }
 
 
-impl<X,C> Debug for TopSet<X,C>
+impl<X:PartialEq,C> Debug for TopSet<X,C>
     where X:Debug, C: FnMut(&X,&X) -> bool
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

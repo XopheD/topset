@@ -1,22 +1,22 @@
 use std::iter::{FusedIterator};
 use crate::TopSet;
 
-pub struct IntoIterSorted<X,C>(TopSet<X,C>)
+pub struct IntoIterSorted<X:PartialEq,C>(TopSet<X,C>)
     where C: FnMut(&X,&X) -> bool;
 
-impl<X,C> From<TopSet<X,C>> for IntoIterSorted<X,C>
+impl<X:PartialEq,C> From<TopSet<X,C>> for IntoIterSorted<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     #[inline] fn from(topset: TopSet<X, C>) -> Self { Self(topset) }
 }
 
-impl<X,C> IntoIterSorted<X,C>
+impl<X:PartialEq,C> IntoIterSorted<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     #[inline] pub fn peek(&mut self) -> Option<&X> { self.0.peek() }
 }
 
-impl<X,C> Iterator for IntoIterSorted<X,C>
+impl<X:PartialEq,C> Iterator for IntoIterSorted<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     type Item = X;
@@ -28,11 +28,11 @@ impl<X,C> Iterator for IntoIterSorted<X,C>
     }
 }
 
-impl<X,C:FnMut(&X,&X)->bool> FusedIterator for IntoIterSorted<X,C> { }
+impl<X:PartialEq,C:FnMut(&X,&X)->bool> FusedIterator for IntoIterSorted<X,C> { }
 
 // impl<X,C:FnMut(&X,&X)->bool> TrustedLen for IntoIterSorted<X,C> { }
 
-impl<X,C> ExactSizeIterator for IntoIterSorted<X,C>
+impl<X:PartialEq,C> ExactSizeIterator for IntoIterSorted<X,C>
     where C: FnMut(&X,&X) -> bool
 {
     #[inline] fn len(&self) -> usize { self.0.len() }
@@ -42,13 +42,15 @@ impl<X,C> ExactSizeIterator for IntoIterSorted<X,C>
 
 pub trait TopSetReducing
 {
-    type Item;
+    type Item:PartialEq;
 
     fn topset<C>(self, n: usize, beat: C) -> TopSet<Self::Item, C>
         where C: FnMut(&Self::Item, &Self::Item) -> bool;
 }
 
-impl<I:Iterator> TopSetReducing for I {
+impl<I:Iterator> TopSetReducing for I
+    where I::Item : PartialEq
+{
     type Item = I::Item;
 
     #[inline]
