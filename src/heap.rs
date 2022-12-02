@@ -9,7 +9,6 @@ impl<X,C> TopSet<X,C>
     /// Creates a new top set with a selecting closure.
     pub fn new(n: usize, beat: C) -> Self
     {
-        assert!(n > 0);
         Self {
             heap: Vec::with_capacity(n),
             count: n,
@@ -23,7 +22,6 @@ impl<X,C> TopSet<X,C>
     /// (according to `beat` selector) are stored.
     pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
     {
-        assert!(n > 0);
         let mut top = Self::new(n, beat);
         top.extend(init);
         top
@@ -35,7 +33,8 @@ impl<X,C> TopSet<X,C>
 
     /// Get the number of stored items.
     ///
-    /// It never exceeds the predefined capacity.
+    /// It never exceeds the predefined capacity
+    /// (the capacity does not grow by itself, only by [`Self::resize`]).
     #[inline]
     pub fn len(&self) -> usize { self.heap.len() }
 
@@ -97,13 +96,14 @@ impl<X,C> TopSet<X,C>
     pub fn insert(&mut self, mut x: X) -> Option<X>
     {
         if self.heap.len() < self.count {
-            // some room left
+            // some room left, so nothing to remove
             self.heap.push(x);
             self.percolate_up(self.heap.len()-1);
             None
-
         } else {
-            if self.beat(&x, &self.heap[0]) {
+            // SAFETY: if the heap is empty when self.count != 0, then we fall
+            // in the previous if condition (so, here, get_unchecked is safe)
+            if self.count != 0 || self.beat(&x, unsafe { self.heap.get_unchecked(0) }) {
                 // put the greatest the deepest: the new one should be kept
                 mem::swap(&mut x, &mut self.heap[0]);
                 self.percolate_down(0);
@@ -285,7 +285,7 @@ mod tests {
         let mut top = TopSet::<f32,_>::new(5, f32::lt);
         top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
         top.extend(vec![81.5, 4.5, 4., 1., 45., 22., 11.]);
-
+dbg!(& )
         assert_eq![ top.pop(), Some(4.5) ];
         assert_eq![ top.pop(), Some(4.) ];
         assert_eq![ top.pop(), Some(4.) ];
