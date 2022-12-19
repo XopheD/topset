@@ -43,7 +43,6 @@
 mod heap;
 pub mod iter;
 
-use std::cell::RefCell;
 pub use iter::TopSetReducing;
 
 /// A top N set of items.
@@ -64,12 +63,12 @@ pub use iter::TopSetReducing;
 /// If it is not the case, the results are unpredictable.
 ///
 #[derive(Clone)]
-pub struct TopSet<X:PartialEq,C>
-    where C: FnMut(&X,&X) -> bool
+pub struct TopSet<X,C>
+    where C: Fn(&X,&X) -> bool
 {
     heap: Vec<X>, // a heap with the greatest at the end
     count: usize,
-    beat: RefCell<C>
+    beat:  C
 }
 
 
