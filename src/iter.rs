@@ -50,6 +50,7 @@ pub trait TopSetReducing
 
     /// Build the top set of the greatest values.
     #[inline]
+    #[allow(clippy::type_complexity)]
     fn topset_greatest(self, n: usize) -> TopSet<Self::Item, fn(&Self::Item,&Self::Item)->bool>
         where Self::Item: PartialOrd, Self: Sized
     {
@@ -58,6 +59,7 @@ pub trait TopSetReducing
 
     /// Build the top set of the lowest values.
     #[inline]
+    #[allow(clippy::type_complexity)]
     fn topset_lowest(self, n: usize) -> TopSet<Self::Item, fn(&Self::Item,&Self::Item)->bool>
         where Self::Item: PartialOrd, Self: Sized
     {

@@ -29,7 +29,7 @@ impl<X,C> TopSet<X,C>
         Self {
             heap: Vec::with_capacity(n),
             count: n,
-            beat: beat.into()
+            beat
         }
     }
 
@@ -271,7 +271,7 @@ impl<'a,X,C> IntoIterator for &'a TopSet<X,C>
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        (&self.heap).into_iter()
+        self.heap.iter()
     }
 }
 

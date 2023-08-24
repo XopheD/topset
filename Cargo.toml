@@ -7,8 +7,3 @@ license = "MIT"
 description = "Top N selector"
 repository = "https://github.com/XopheD/topset"
 documentation = "https://docs.rs/topset"
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
