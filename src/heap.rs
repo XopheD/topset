@@ -21,9 +21,13 @@ impl<X,C> TopSet<X,C>
     /// This function should always returns the same result
     /// when dealing with the same items or results are unpredictable.
     ///
-    /// ## Example
+    /// # Example
     /// Collecting the 5 greatest integers is performed by using a
     /// topset with `n = 5` and `beat = i32::gt`.
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::new(5, i32::gt);
+    /// ```
     pub fn new(n: usize, beat: C) -> Self
     {
         Self {
@@ -37,7 +41,16 @@ impl<X,C> TopSet<X,C>
     ///
     /// If the initial set contains more than `n` elements, only the `n` greatest ones
     /// (according to `beat` challenging function) are stored.
-    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, init: I, beat: C) -> Self
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3]);
+    /// assert_eq!( topset.pop(), Some(7));
+    /// assert_eq!( topset.pop(), Some(9));
+    /// assert_eq!( topset.pop(), None);
+    /// ```
+    pub fn with_init<I: IntoIterator<Item=X>>(n: usize, beat: C, init: I) -> Self
     {
         let mut top = Self::new(n, beat);
         top.extend(init);
@@ -45,6 +58,14 @@ impl<X,C> TopSet<X,C>
     }
 
     /// Check if the top set is empty
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::new(2, u32::gt);
+    /// assert!( topset.is_empty() );
+    /// topset.extend( vec![7,5,6,9,4,2,3] );
+    /// assert!( ! topset.is_empty() );
+    /// ```
     #[inline]
     pub fn is_empty(&self) -> bool { self.heap.is_empty() }
 
@@ -52,6 +73,15 @@ impl<X,C> TopSet<X,C>
     ///
     /// It never exceeds the predefined capacity
     /// (the capacity does not grow by itself, only by calling [`Self::resize`]).
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// assert_eq!( topset.len(), 2 );
+    /// topset.pop();
+    /// assert_eq!( topset.len(), 1 );
+    /// ```
     #[inline]
     pub fn len(&self) -> usize { self.heap.len() }
 
@@ -59,6 +89,14 @@ impl<X,C> TopSet<X,C>
     ///
     /// The capacity limits the number of elements to keep.
     /// This capacity could only change by calling [`resize`].
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::new(4, u32::gt);
+    /// assert_eq!( topset.capacity(), 4 );
+    /// assert_eq!( topset.len(), 0 );
+    /// ```
     #[inline]
     pub fn capacity(&self) -> usize { self.count }
 
@@ -66,6 +104,18 @@ impl<X,C> TopSet<X,C>
     ///
     /// Notice that it actually returned the _lowest_ one and
     /// so all the others are better (or equal) this one.
+    ///
+    /// To access to this _lowest_ element and removing it,
+    /// consider [`Self::pop`].
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// assert_eq!( topset.peek(), Some(&7) );
+    /// assert_eq!( topset.pop(), Some(7) );
+    /// assert_eq!( topset.peek(), Some(&9) );
+    /// ```
     #[inline]
     pub fn peek(&self) -> Option<&X>
     {
@@ -80,6 +130,17 @@ impl<X,C> TopSet<X,C>
     ///
     /// Note that in any case the insertion is not done. See [`Self::insert`] to
     /// perform the test and the insertion in one time.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// // this topset contains { 7, 9 }
+    /// let topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// assert!( topset.is_candidate(&10) );
+    /// assert!( topset.is_candidate(&8) );
+    /// assert!( ! topset.is_candidate(&7) );
+    /// assert!( ! topset.is_candidate(&6) );
+    /// ```
     #[inline]
     pub fn is_candidate(&self, x: &X) -> bool {
         self.heap.len() < self.count || self.beat(x, self.peek().unwrap())
@@ -91,6 +152,16 @@ impl<X,C> TopSet<X,C>
     /// could be obtained by iterative call to [`Self::pop`]
     /// or by using [`Self::into_iter_sorted`].
     ///
+    /// To get a vector with all elements, instead of using this
+    /// iterator, consider [`Self::into_vec`].
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// // this topset contains { 7, 9 }
+    /// let topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// let elts = topset.iter().cloned().collect::<Vec<_>>();
+    /// ```
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item=&X>
     {
@@ -101,6 +172,14 @@ impl<X,C> TopSet<X,C>
     ///
     /// This vector is **not** sorted.
     /// See [`Self::into_sorted_vec`] if a sorted result is expected.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// // this topset contains { 7, 9 }
+    /// let topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// let elts = topset.into_vec();
+    /// ```
     #[inline]
     pub fn into_vec(self) -> Vec<X> { self.heap }
 
@@ -114,6 +193,15 @@ impl<X,C> TopSet<X,C>
     /// and the removed item is returned
     /// * if the new item is worse than all the stored ones, it is returned
     ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::new(2, u32::gt);
+    /// assert_eq!( topset.insert(7), None);
+    /// assert_eq!( topset.insert(8), None);
+    /// assert_eq!( topset.insert(9), Some(7));
+    /// assert_eq!( topset.insert(6), Some(6));
+    /// ```
     pub fn insert(&mut self, mut x: X) -> Option<X>
     {
         if self.heap.len() < self.count {
@@ -137,6 +225,17 @@ impl<X,C> TopSet<X,C>
     ///
     /// Notice that the _lowest_ item of the top set is the
     /// first one. The _greatest_ item is the last one.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// // this topset contains { 7, 9 }
+    /// let topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// let mut iter = topset.into_iter_sorted();
+    /// assert_eq!( iter.next(), Some(7));
+    /// assert_eq!( iter.next(), Some(9));
+    /// assert_eq!( iter.next(), None);
+    /// ```
     #[inline]
     pub fn into_iter_sorted(self) -> crate::iter::IntoIterSorted<X,C> {
         self.into()
@@ -146,6 +245,14 @@ impl<X,C> TopSet<X,C>
     ///
     /// The first element of the vector is the _lowest_ item of the top set
     /// and the last one is the _greatest_ one.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// // this topset contains { 7, 9 }
+    /// let topset = TopSet::with_init(3, u32::gt, vec![1,2,7,4,7,5,6,9,4,2,3] );
+    /// assert_eq!( topset.into_sorted_vec(), vec![7,7,9]);
+    /// ```
     pub fn into_sorted_vec(mut self) -> Vec<X>
         where X:PartialEq
     {
@@ -161,11 +268,49 @@ impl<X,C> TopSet<X,C>
         self.heap
     }
 
+    /// Clears the binary heap, returning an iterator over the removed elements in arbitrary order.
+    /// If the iterator is dropped before being fully consumed, it drops the remaining elements in arbitrary order.
+    ///
+    /// The returned iterator keeps a mutable borrow on the heap to optimize its implementation.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(4, u32::gt, vec![7,5,6,9,4,2,3] );
+    /// let _ = topset.drain();
+    /// assert! (topset.is_empty());
+    /// ```
+    #[inline]
+    pub fn drain(&mut self) -> std::vec::Drain<X> {
+        self.heap.drain(..)
+    }
+
     /// Resize the top set
     ///
     /// If the size decreases, then the lowest items are removed.
     /// If the size increases, nothing else happens but there is still more room
     /// for next insertions.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(4, u32::gt, vec![7,5,6,9,4,2,3] );
+    ///
+    /// // the topset contains { 7, 5, 6, 9 }
+    /// assert_eq! (topset.peek(), Some(&5));
+    ///
+    /// topset.resize(2);
+    /// // the topset contains { 7, 9 }
+    /// assert_eq! (topset.peek(), Some(&7));
+    ///
+    /// // try to add 1 but no more room left
+    /// assert_eq!( topset.insert(1), Some(1) );
+    ///
+    /// topset.resize(3); // grows by one
+    /// assert_eq!( topset.insert(1), None ); // one room left
+    /// assert_eq!( topset.insert(2), Some(1) ); // but now, is full
+    /// // at this point, the topset contains { 7, 9, 2 }
+    /// ```
     pub fn resize(&mut self, n: usize)
     {
         if self.count < n {
@@ -185,6 +330,21 @@ impl<X,C> TopSet<X,C>
     ///
     /// This method is the only way to get the top elements
     /// in a sorted way (from the lowest to the best).
+    /// Resize the top set
+    ///
+    /// If the size decreases, then the lowest items are removed.
+    /// If the size increases, nothing else happens but there is still more room
+    /// for next insertions.
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    ///
+    /// assert_eq! (topset.pop(), Some(7));
+    /// assert_eq! (topset.pop(), Some(9));
+    /// assert_eq! (topset.pop(), None);
+    /// ```
     pub fn pop(&mut self) -> Option<X>
     {
         match self.heap.len() {
@@ -199,9 +359,30 @@ impl<X,C> TopSet<X,C>
     }
 
     /// Removes all the elements in the top set
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    ///
+    /// assert_eq! (topset.len(), 2);
+    /// topset.clear();
+    /// assert_eq!( topset.len(), 0)
+    /// ```
     #[inline] pub fn clear(&mut self) { self.heap.clear() }
 
-    /// Checks if an element beats the other
+    /// Checks if an element beats the other.
+    ///
+    /// It does not related to the current elements in the topset but
+    /// refers only to the comparing function (the _beat_).
+    ///
+    /// # Example
+    /// ```
+    /// # use topset::TopSet;
+    /// let mut topset = TopSet::with_init(2, u32::gt, vec![7,5,6,9,4,2,3] );
+    ///
+    /// assert! ( topset.beat(&4, &3));
+    /// assert! ( ! topset.beat(&4, &7));
+    /// ```
     #[inline] pub fn beat(&self, a:&X, b:&X) -> bool { (self.beat)(a,b) }
 
     // internal stuff
@@ -320,38 +501,9 @@ mod tests {
     {
         assert_eq![
             vec![81,5, 4,5,4,1,45,22,1,5,97,5,877,12,0]
-            .into_iter()
-            .topset(5, u32::gt)
-            .into_iter()
-            .last(),
+                .topset(5, u32::gt)
+                .into_iter()
+                .last(),
             Some(877)];
     }
-
-    /*    fn top()
-    {
-        let items = vec![4, 5, 9, 2, 3, 8, 4, 7, 8, 1];
-
-        // getting the four greatest integers (repeating allowed)
-        items.clone().into_iter()
-            .topset(4, i32::gt)
-            .into_iter_sorted()
-            .for_each(|x| eprintln!("in the top 4: {}", x));
-
-        let mut i =  items.clone().into_iter()
-            .topset(4, i32::gt);
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-        eprintln!("in the top 4: {:?}", i.pop());
-
-        // getting the four smallest integers
-        // (we just need to reverse the comparison function)
-        items.into_iter()
-            .topset(4, i32::lt)
-            .into_iter_sorted()
-            .for_each(|x| eprintln!("in the last 4: {}", x));
-    }*/
 }

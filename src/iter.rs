@@ -13,7 +13,7 @@ impl<X,C> From<TopSet<X,C>> for IntoIterSorted<X,C>
 impl<X,C> IntoIterSorted<X,C>
     where C: Fn(&X,&X) -> bool
 {
-    #[inline] pub fn peek(&mut self) -> Option<&X> { self.0.peek() }
+    #[inline] pub fn peek(&self) -> Option<&X> { self.0.peek() }
 }
 
 impl<X,C> Iterator for IntoIterSorted<X,C>
@@ -104,10 +104,24 @@ mod tests {
     {
         assert_eq![
             vec![81, 5, 4, 5, 4, 1, 45, 22, 1, 5, 97, 5, 877, 12, 0]
-                .into_iter()
                 .topset_greatest(5)
                 .into_iter()
                 .last(),
             Some(877)];
+    }
+
+    #[test]
+    fn iterator()
+    {
+        let top = vec![ 4, 9, 7, 3, 4, 1 ].topset_lowest(3);
+
+        let iter = top.clone().into_iter_sorted();
+        assert_eq!( iter.len(), 3);
+        assert_eq!( iter.count(), 3);
+
+        let iter = top.into_iter_sorted();
+        assert_eq!( iter.peek(), Some(&4));
+        assert_eq!( iter.size_hint(), (3, Some(3)));
+        assert_eq!( iter.last(), Some(1));
     }
 }

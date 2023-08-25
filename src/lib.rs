@@ -71,5 +71,7 @@ pub struct TopSet<X,C>
 #[test]
 fn dummy_tests_just_for_coverage() {
     let top = TopSet::new(10, u32::gt);
-    let _ = top.clone();
+    let _ = (&top).into_iter();
+    let _ = top.clone().into_iter();
+    dbg!(&top);
 }
